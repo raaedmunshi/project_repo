@@ -1,0 +1,106 @@
+# installing packages
+packages <- c("ggplot2", "readxl", "dplyr", "zoo", 
+              "data.table", "scales", "caTools")
+
+installed_packages <- packages %in% rownames(installed.packages())
+if (any(installed_packages == FALSE)) {
+  install.packages(packages[!installed_packages])
+}
+library(leaps)
+library("readxl")
+library("dplyr")
+library("zoo")
+library("data.table")
+library("scales")
+library("ggplot2")
+
+# end of dependency configuration
+
+getwd()
+setwd("/Users/amoor22/Desktop/AUS Spring 2023/STA 401/project")
+getwd()
+
+train = read.table("data/engine_dataset.txt")
+var(train)
+summary(train)
+
+
+attach(train)
+generate_train_RUL <- function(dataF) {
+  numId = max(dataF[, 1])
+  RUL = c()
+  
+  for (i in 1:numId) {
+    curIdRUL = max( dataF[dataF$id == i, ]$cycle )
+    RUL <- c(RUL, seq(curIdRUL-1, 0))
+  }
+  dataF["RUL"] = RUL
+  return (dataF)
+}
+
+colnames_full = c('unit_number','time_in_cycles','setting_1','setting_2','TRA','T2','T24','T30','T50','P2','P15','P30','Nf',
+                  'Nc','epr','Ps30','phi','NRf','NRc','BPR','farB','htBleed','Nf_dmd','PCNfR_dmd','W31','W32')
+
+colnames_nums = c("id","cycle","op1","op2","op3","sensor1","sensor2","sensor3","sensor4","sensor5"
+                    ,"sensor6","sensor7","sensor8","sensor9","sensor10","sensor11","sensor12","sensor13"
+                    ,"sensor14","sensor15","sensor16","sensor17","sensor18","sensor19"
+                    ,"sensor20","sensor21")
+
+colnames(train) = colnames_nums
+
+train = generate_train_RUL(train)
+
+# removing zero-variance columns
+removeZeroVar <- function(df){
+  return (df[, !sapply(df, function(x) min(x) == max(x))])
+}
+train = removeZeroVar(train)
+train = train[, -c(1,2)]
+
+
+pr.out=prcomp(train, scale=TRUE)
+names(pr.out)
+pr.out$center
+# SD
+pr.out$scale
+pr.out$rotation # PCA loadings
+pr.out$x # PCA scores
+
+dim(train)
+dim(pr.out$x)
+summary(pr.out)
+biplot(pr.out)
+# flipping sign for easier interpretation, but same relations
+pr.out$rotation=-pr.out$rotation
+pr.out$x=-pr.out$x
+biplot(pr.out, scale=0, showLoadings = FALSE)
+
+install.packages("remotes")
+remotes::install_github("vqv/ggbiplot")
+library(devtools)
+library(ggbiplot)
+
+ggbiplot(pr.out, alpha = 0, varname.adjust = 1.5, var.axes=TRUE) + ylim(-2,1.5) + xlim(-2, 2.2)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,149 @@
+setwd("U:/STA 401/Project data")
+getwd()
+
+library("readxl")
+library(leaps)
+#install.packages("xgboost")
+library(xgboost)
+library(caret)
+library(tidyverse)
+#install.packages("DiagrammeR")
+library(DiagrammeR)
+#install.packages("Ckmeans.1d.dp")
+library(Ckmeans.1d.dp)
+
+
+data <- read_excel("Train.xlsx", col_names =FALSE)
+
+
+#name the columns
+colnames(data) = c('id','cycle','setting_1','setting_2','setting_3','T2','T24','T30','T50','P2','P15','P30','Nf',
+                   'Nc','epr','Ps30','phi','NRf','NRc','BPR','farB','htBleed','Nf_dmd','PCNfR_dmd','W31','W32')
+
+names(data)
+
+#generate RUL column
+generate_train_RUL <- function(dataF) {
+  numId = max(dataF[, 1])
+  RUL = c()
+  
+  for (i in 1:numId) {
+    curIdRUL = max( dataF[dataF$id == i, ]$cycle )
+    RUL <- c(RUL, seq(curIdRUL-1, 0))
+  }
+  dataF["RUL"] = RUL
+  return (dataF)
+}
+data = generate_train_RUL(data)
+#removing zerovar variables
+removeZeroVar <- function(df){
+  return (df[, !sapply(df, function(x) min(x) == max(x))])
+}
+data = removeZeroVar(data) 
+
+# scaling
+rul = data[,length(data)]
+data <- apply(data[, -length(data)], 2, function(x) {
+  (x - min(x)) / (max(x) - min(x))
+})
+data= as.data.frame(data)
+data["RUL"] = rul
+
+
+
+
+
+
+
+
+
+#removing id and cycle from data matrix
+names(data)
+data=data[,-c(1,2)]
+names(data)
+
+#
+#s <- createDataPartition(y = data$RUL,p = 0.8,list = FALSE)
+#train <- data[s,]
+#validate<- data[-s,]
+
+
+#splitting time series data by partitioning it by 80/20 split proportionally
+set.seed(89354)
+n_train <- floor(0.8 * nrow(data))
+train <- data[1:n_train, ]
+test <- data[(n_train + 1):nrow(data), ]
+
+  
+train_matrix <- as.matrix(train)
+test_matrix <- as.matrix(test)
+
+
+
+
+#specifications for xgboost
+
+grid_tune <- expand.grid(
+  nrounds=c(500,1000,1500),#number of trees
+  max_depth=c(2,4,6),#height of tree
+  eta=0.025,# learning rate,(0.025,0.05,0.1,0.3)
+  gamma=0,# pruning
+  colsample_bytree=1,
+  min_child_weight=1,
+  subsample=1
+)
+train_control <-trainControl(method="cv",
+                             number=10,# n fold cross validation
+                             verboseIter = TRUE,
+                             allowParallel = TRUE)
+
+
+#train$RUL=as.numeric(train$RUL)
+#str(train)
+set.seed(89354)
+xgb_tune <-train(
+  x=train[,-18],#without RUL,all 17 features
+  y=train$RUL,#with RUL (target)
+  trControl=train_control,
+  tuneGrid=grid_tune,
+  method="xgbTree",
+  verbose=TRUE
+)
+
+xgb_tune
+
+pred=predict(xgb_tune,test)
+
+mse <- mean((test$RUL- pred)^2)
+mse
+r2 <- 1 - sum((test$RUL - pred)^2) / sum((test$RUL - mean(test$RUL))^2)
+r2
+
+results <- data.frame(Predicted = pred, True = test$RUL)
+plot(results$True, results$Predicted, main = "Predicted vs True", xlab = "True", ylab = "Predicted")
+abline(a = 0, b = 1, col = "red")
+# histogram of residuals
+residuals <- results$Predicted - results$True
+hist(residuals, main = "Histogram of Residuals", xlab = "Residuals")
+# Q-Q plot of residuals
+qqnorm(residuals)
+qqline(residuals, col = "red")
+
+# boxplot of residuals
+boxplot(residuals, main = "Boxplot of Residuals")
+
+# plot of predicted vs residuals
+plot(results$Predicted, residuals, main = "Predicted vs Residuals", xlab = "Predicted", ylab = "Residuals")
+abline(h = 0, col = "red")
+
+xgimp=xgb.importance(feature_names = xgb_tune$finalModel$feature_names,model= xgb_tune$finalModel)
+
+xgb.ggplot.importance(xgimp)
+
+
+model=xgb.dump(xgb_tune$finalModel,with_stats = T)
+model[1:10]
+
+
+xgb.plot.multi.trees(model = xgb_tune$finalModel,plot_height = 800,plot_width = 1000)
+

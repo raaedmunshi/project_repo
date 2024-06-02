@@ -1,0 +1,132 @@
+setwd("D:/Data Mining Project")
+library(readxl)
+train<- read_xlsx("train_FD001.xlsx", col_names= TRUE,na="?")
+library(e1071)
+
+colnames_full = c('id','cycle','setting_1','setting_2','setting_3','T2','T24','T30','T50','P2','P15','P30','Nf',
+                  'Nc','epr','Ps30','phi','NRf','NRc','BPR','farB','htBleed','Nf_dmd','PCNfR_dmd','W31','W32') #adding column labels to train set
+colnames(train) = colnames_full
+
+
+removeZeroVar <- function(df){
+  return (df[, !sapply(df, function(x) min(x) == max(x))])
+}
+
+train = removeZeroVar(train)
+
+generate_train_RUL <- function(dataF) {
+  numId = max(dataF[, 1])
+  RUL = c()
+  
+  for (i in 1:numId) {
+    curIdRUL = max( dataF[dataF$id == i, ]$cycle )
+    RUL <- c(RUL, seq(curIdRUL-1, 0))
+  }
+  dataF["RUL"] = RUL
+  return (dataF)
+}
+train = generate_train_RUL(train)
+rul = train[,length(train)]
+train <- apply(train[, -length(train)], 2, function(x) {
+  (x - min(x)) / (max(x) - min(x))
+})
+train = as.data.frame(train)
+train["RUL"]=rul
+library(caret)
+set.seed(123)
+install.packages("doParallel")
+library(doParallel)
+
+a <- createDataPartition(y=train$RUL,p = 0.8,list = FALSE)
+train_ <- train[a,] # 80% training
+test_ <- train[-a,] 
+
+evaluate_regression <- function(predictions, true_labels) {
+  
+  mae <- mean(abs(predictions - true_labels))
+  
+  rmse <- sqrt(mean((predictions - true_labels)^2))
+  
+  r_squared <- R2(predictions, true_labels)
+  
+  mse <- mean((predictions - true_labels)^2)
+  
+  cat("Mean Absolute Error (MAE):", mae, "\n")
+  cat("Root Mean Squared Error (RMSE):", rmse, "\n")
+  cat("R-squared (R²):", r_squared, "\n")
+  cat("Mean Squared Error (MSE):", mse, "\n")
+}
+
+
+folds <- createFolds(train_$RUL, k = 5)
+
+ctrl <- trainControl(method = "repeatedcv", 
+                     repeats = 3, 
+                     index = folds,
+                     classProbs = TRUE)
+
+
+model_C1 <- ksvm(RUL ~ ., data = train_, kernel = "rbfdot", C = 1, trControl = ctrl, preProcess = c("center", "scale"))
+predictions_C1 <- predict(model_C1, newdata = test_)
+evaluate_regression(predictions_C1, test_$RUL)
+
+plot(model_C1)
+
+cost_values <- c(0.01, 0.1, 1, 5 ,10)  # Define the cost values to evaluate
+rmse_values <- numeric(length(cost_values))
+
+for (i in seq_along(cost_values)) {
+  model <- ksvm(RUL ~ ., data = train_, kernel = "rbfdot", C = cost_values[i],trControl = ctrl, preProcess = c("center", "scale") )
+  predictions <- predict(model, newdata = test_)
+  rmse_values[i] <- sqrt(mean((predictions - test_$RUL)^2))
+}
+
+plot(cost_values, rmse_values, type = "b", xlab = "Cost", ylab = "RMSE")
+
+
+library(ggplot2)
+
+scatter_data <- data.frame(Predicted = predictions_C5, Actual = test_$RUL)
+ggplot(scatter_data, aes(x = Predicted, y = Actual)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, color = "red") +
+  xlab("Predicted") +
+  ylab("Actual") +
+  ggtitle("Scatter Plot: Actual vs Predicted")
+
+residuals <- predictions - test_$RUL
+ggplot(data.frame(Predicted = predictions, Residuals = residuals), aes(x = Predicted, y = Residuals)) +
+  geom_point() +
+  geom_hline(yintercept = 0, color = "red") +
+  xlab("Predicted") +
+  ylab("Residuals") +
+  ggtitle("Residual Plot")
+
+
+ggplot(data.frame(Residuals = residuals), aes(x = Residuals)) +
+  geom_histogram(binwidth = 5) +
+  xlab("Residuals") +
+  ylab("Frequency") +
+  ggtitle("Residual Distribution")
+
+
+library(kernlab)
+model_linear2 <- ksvm(RUL ~ ., data = train_,trControl = ctrl,kernel = "vanilladot", preProcess = c("center", "scale") )
+
+print(model_linear2)
+
+predictions_linear2 <- predict(model_linear2, newdata = test_)
+evaluate_regression(predictions_linear2, test_$RUL)
+
+model_poly <- ksvm(RUL ~ ., data = train_, kernel = "poly", degree = 2, trControl = ctrl, preProcess = c("center", "scale"))
+print(model_poly)
+
+predictions_poly <- predict(model_poly, newdata = test_)
+evaluate_regression(predictions_poly, test_$RUL)
+
+
+model_poly4 <- ksvm(RUL ~ ., data = train_, kernel = "poly", degree = 4, trControl = ctrl, preProcess = c("center", "scale"))
+print(model_poly4)
+
+predictions_poly4 <- predict(model_poly4, newdata = test_)
+evaluate_regression(predictions_poly4, test_$RUL)

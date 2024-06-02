@@ -1,0 +1,144 @@
+# installing packages
+packages <- c("ggplot2", "readxl", "dplyr", "zoo", 
+              "data.table", "scales", "caTools", "doParallel")
+
+installed_packages <- packages %in% rownames(installed.packages())
+if (any(installed_packages == FALSE)) {
+  install.packages(packages[!installed_packages])
+}
+library(leaps)
+library("readxl")
+library("dplyr")
+library("zoo")
+library("data.table")
+library("scales")
+library("ggplot2")
+library(caTools)
+library(doParallel)
+library(gam)
+library(caret)
+require("corrplot")
+
+# end of dependency configuration
+
+getwd()
+setwd("/Users/amoor22/Desktop/AUS Spring 2023/STA 401/project")
+getwd()
+
+train = read.table("data/engine_dataset.txt")
+var(train)
+summary(train)
+
+
+attach(train)
+generate_train_RUL <- function(dataF) {
+  numId = max(dataF[, 1])
+  RUL = c()
+  
+  for (i in 1:numId) {
+    curIdRUL = max( dataF[dataF$id == i, ]$cycle )
+    RUL <- c(RUL, seq(curIdRUL-1, 0))
+  }
+  dataF["RUL"] = RUL
+  return (dataF)
+}
+colnames(train) = c('id','cycle','setting_1','setting_2','setting_3','T2','T24','T30','T50','P2','P15','P30','Nf',
+                                    'Nc','epr','Ps30','phi','NRf','NRc','BPR','farB','htBleed','Nf_dmd','PCNfR_dmd','W31','W32')
+
+train = generate_train_RUL(train)
+
+
+removeZeroVar <- function(df){
+  return (df[, !sapply(df, function(x) min(x) == max(x))])
+}
+train = removeZeroVar(train)
+
+corrplot(cor(train[, -2]), method = "square")
+
+# ----------- scaling
+rul = train[,length(train)]
+train <- apply(train[, -length(train)], 2, function(x) {
+  (x - min(x)) / (max(x) - min(x))
+})
+train = as.data.frame(train)
+train["RUL"] = rul
+
+# ----------- dropping cycle and id
+toDrop = c("cycle", "id")
+train = train[, !( names(train) %in%  toDrop)]
+
+# ---------- splitting
+split <- sample.split(train, SplitRatio = 0.8)
+
+train_reg <- subset(train, split == "TRUE")
+test_reg <- subset(train, split == "FALSE")
+
+
+
+# Define the training control with 10-fold cross-validation
+train_control <- trainControl(method = "cv", number = 5)
+
+# used for running R in parallel for faster computing performance
+cl <- makeCluster(detectCores())
+registerDoParallel(cl)
+
+best_performance <- train(RUL ~ ., data = train_reg, method = "gam", family = "gaussian", trControl = train_control,  metric = "RMSE")
+
+
+print(best_performance$finalModel)
+
+# ------------ predicting on the test split and generating plots
+
+predictions <- predict(best_performance, test_reg)
+mse <- mean((test_reg$RUL- predictions)^2)
+mse
+r2 <- 1 - sum((test_reg$RUL - predictions)^2) / sum((test_reg$RUL - mean(test_reg$RUL))^2)
+results <- data.frame(Predicted = predictions, True = test_reg$RUL)
+plot(results$True, results$Predicted, main = "Predicted vs True", xlab = "True", ylab = "Predicted")
+abline(a = 0, b = 1, col = "red")
+
+# histogram of residuals
+residuals <- results$Predicted - results$True
+hist(residuals, main = "Histogram of Residuals", xlab = "Residuals")
+
+# Q-Q plot of residuals
+qqnorm(residuals)
+qqline(residuals, col = "red")
+
+# boxplot of residuals
+boxplot(residuals, main = "Boxplot of Residuals")
+
+# plot of predicted vs residuals
+plot(results$Predicted, residuals, main = "Predicted vs Residuals", xlab = "Predicted", ylab = "Residuals")
+abline(h = 0, col = "red")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

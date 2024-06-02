@@ -1,0 +1,132 @@
+setwd ("C:/Users/Ace/Desktop/STA401/Project")
+
+install.packages("corrplot")
+install.packages("leaps")
+library(leaps)
+library(corrplot)
+library(tree)
+library(readxl)
+train <- read_excel("train01.xlsx", col_names = FALSE)
+
+View(train)
+
+colnames_full = c('id','cycle','setting_1','setting_2','setting_3','T2','T24','T30','T50','P2','P15','P30','Nf',
+                  'Nc','epr','Ps30','phi','NRf','NRc','BPR','farB','htBleed','Nf_dmd','PCNfR_dmd','W31','W32') #adding column labels to train set
+colnames(train) = colnames_full
+
+removeZeroVar <- function(df){
+  return (df[, !sapply(df, function(x) min(x) == max(x))])
+}
+train = removeZeroVar(train) #removing zerovar variables
+
+corrplot(cor(train))
+
+
+generate_train_RUL <- function(dataF) {
+  numId = max(dataF[, 1])
+  RUL = c()
+  
+  for (i in 1:numId) {
+    curIdRUL = max( dataF[dataF$id == i, ]$cycle )
+    RUL <- c(RUL, seq(curIdRUL-1, 0))
+  }
+  dataF["RUL"] = RUL
+  return (dataF)
+}
+RUL_col=(c(generate_train_RUL(train)$RUL)) #creating RUL column vector, prescaling
+
+#############
+train_id<-train$id
+train_cycle<-train$cycle
+train$id<-NULL #DROPS ID COLUMN
+train$cycle<-NULL #DROPS ID COLUMN
+
+# train_scaled <- apply(train, 2, function(x) {
+#   (x - min(x)) / (max(x) - min(x))
+# }) #scaling the units
+
+# train_scaled <- as.data.frame(train_scaled)
+# 
+# train_scaled$RUL <- RUL_col #inserting previously calculated RUL to last column
+
+train$RUL <- RUL_col #inserting previously calculated RUL to last column
+corrplot(cor(train))
+
+set.seed(69420)
+
+tree=tree(RUL~.,data=train)
+summary(tree)
+plot(tree)
+text(tree)
+
+set.seed(69420)
+cv.tree=cv.tree(tree) #CROSS VALIDATION
+cv.tree
+plot(cv.tree$size,cv.tree$dev,type='b') #TAKE LOWEST ERROR AND PUT IN THE ONE WITH THE LOWEST ERROR INTO THE PRUNING. THIS LINE PLOT SHOWS LEAST ERROR
+prune.tree=prune.tree(tree,best=6)
+plot(prune.tree)
+text(prune.tree)
+summary(prune.tree)
+yhat=predict(prune.tree,newdata=train)
+yhat
+plot(train$RUL, yhat)
+abline(0,1) 
+mean((yhat-train$RUL)^2) 
+
+
+# Bagging and Random Forests
+install.packages("randomForest")
+library(randomForest)
+
+set.seed(69420)
+View(train)
+
+
+str(train)
+
+set.seed(69420)
+
+library(caret)
+library(doParallel)
+s <- createDataPartition(train$RUL, p = 0.8, list = FALSE, times = 1)
+training <- train[s, ]
+testing <- train[-s, ]
+
+cl <- makeCluster(detectCores())
+registerDoParallel(cl)
+
+# Set up the train control
+rf.cv <- trainControl(method = "cv",   
+                     number = 2,     
+                     allowParallel=TRUE)
+
+# Train the model using random forest and the train control
+rf.model <- train(RUL ~ ., 
+                  data = training, 
+                  method = "rf", 
+                  metric = "RMSE",
+                  trControl = rf.cv)
+
+yhat.rf = predict(rf.model, newdata=training)
+mean((yhat.rf-training$RUL)^2)
+rsq_train <- 1 - (mean((yhat.rf-training$RUL)^2) / var(training$RUL))
+rsq_train
+par(mfrow=c(1,2))
+importance(rf.train)
+varImpPlot(rf.train) #sorted. shows which var is most influential variable in reducing MSE
+
+
+
+yhat.rf = predict(rf.model, newdata=testing)
+mean((yhat.rf-testing$RUL)^2)
+rsq_test <- 1 - (mean((yhat.rf-testing$RUL)^2) / var(testing$RUL))
+rsq_test
+par(mfrow=c(1,1))
+importance(rf.train)
+varImpPlot(rf.train) #sorted. shows which var is most influential variable in reducing MSE
+
+#Residuals Plotting
+predictions<-yhat.rf
+residuals_testing<- testing$RUL-predictions
+plot(predictions, residuals_testing, xlab = "Predicted RUL", ylab = "Residuals")
+abline(h = 0, col = "red")

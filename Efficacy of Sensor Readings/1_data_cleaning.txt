@@ -1,0 +1,195 @@
+# installing packages
+packages <- c("ggplot2", "readxl", "dplyr", "zoo", 
+              "data.table", "scales", "caTools")
+
+installed_packages <- packages %in% rownames(installed.packages())
+if (any(installed_packages == FALSE)) {
+  install.packages(packages[!installed_packages])
+}
+
+library("readxl")
+library("dplyr")
+library("zoo")
+library("data.table")
+library("scales")
+library("ggplot2")
+
+# end of dependency configuration
+
+getwd()
+setwd("/Users/amoor22/Desktop/AUS Spring 2023/STA 401/project")
+getwd()
+
+train = read.table("data/engine_dataset.txt")
+var(train)
+summary(train)
+
+# plotting to better visualize the data
+theme_set(theme_bw())  # theme for figures
+options(repr.plot.width = 8, repr.plot.height = 6)
+
+
+ggplot(data = firstTwo, 
+       aes(x = V2, y = V3, col = factor(V1))) +
+  geom_line(alpha = 0.5) +
+  labs(y = "V3", color = "trajectoryID") +
+  facet_wrap(~V1, ncol=1)
+
+# using logistic regression
+
+attach(train)
+generate_train_RUL <- function(dataF) {
+  numId = max(dataF[, 1])
+  RUL = c()
+  
+  for (i in 1:numId) {
+    curIdRUL = max( dataF[dataF$id == i, ]$cycle )
+    RUL <- c(RUL, seq(curIdRUL-1, 0))
+  }
+  dataF["RUL"] = RUL
+  return (dataF)
+}
+colnames(train) = c('id','cycle','setting_1','setting_2','setting_3','T2','T24','T30','T50','P2','P15','P30','Nf',
+                    'Nc','epr','Ps30','phi','NRf','NRc','BPR','farB','htBleed','Nf_dmd','PCNfR_dmd','W31','W32')
+
+train = generate_train_RUL(train)
+
+# generate_train_RUL(train)
+
+
+
+meanRUL = mean( train[train$cycle==1, ]$RUL )
+
+allRULs = train[train$cycle==1, ]$RUL
+
+
+h = hist(allRULs, xlab="RUL")
+x = allRULs
+xfit<-seq(min(x),max(x),length=40)
+yfit<-dnorm(xfit,mean=mean(x),sd=sd(x))
+yfit <- yfit*diff(h$mids[1:2])*length(x)
+lines(xfit, yfit, col="blue", lwd=2)
+
+sum(is.na(train))
+sapply(train, var)
+corrplot(train)
+
+# --------------- dropping columns with zero variance (useless)
+
+toKeep = rep(T, length(train))
+for(i in 1:length(train)) {
+  if (var(train[i]) == 0)
+    toKeep[i] = F
+}
+toKeep
+train = train[, toKeep]
+
+# ----------- improved remove zero var function
+removeZeroVar <- function(df){
+  return (df[, !sapply(df, function(x) min(x) == max(x))])
+}
+train = removeZeroVar(train)
+
+require("corrplot")
+corrplot(cor(train[, -2]), method = "square")
+var(train)
+
+library(dplyr)
+library(caTools)
+
+# ----------- scaling
+train <- apply(train, 2, function(x) {
+  (x - min(x)) / (max(x) - min(x))
+})
+train = as.data.frame(train)
+
+# ---------- splitting
+split <- sample.split(train, SplitRatio = 0.8)
+
+train_reg <- subset(train, split == "TRUE")
+test_reg <- subset(train, split == "FALSE")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ------- misc (extra)
+reverse_min_max_scaling_vec <- function(vector, min_val, max_val) {
+  unscaled_vector <- (vector * (max_val - min_val)) + min_val
+  return(unscaled_vector)
+}
+preds_unscaled <- reverse_min_max_scaling_vec(predictions, 0, 361)
+
+
+regfit.full <- regsubsets(RUL ~ . - id - cycle, data = train,
+                          nvmax = 17) # includes all variables
+reg.summary <- summary(regfit.full)
+
+for(i in 1:1) {
+  choice = reg.summary$which[i,]
+  
+  train_subset = train_reg[, choice]
+  test_subset = test_reg[, choice]
+}
+
+library(gam)
+detach("package:mgcv", unload=TRUE)
+# gam_model <- mgcv::gam(RUL ~ . - cycle , data=train_reg)
+# gam_model <- gam::gam(RUL ~ . - cycle, data=train_reg)
+gam_model <- gam(RUL ~ s(sensor2, 3)+s(sensor3, 3)+s(sensor4, 3)+s(sensor7, 3)+s(sensor8, 3)+s(sensor17, 3)+s(sensor15, 3), data=train_reg)
+lm_model <- lm(RUL ~ . - cycle, data=train_reg)
+# Summary
+summary(lm_model)
+summary(logistic_glm)
+summary(gam_model)
+
+plot(gam_model)
+# Predict test data based on model
+predict_glm <- predict(logistic_glm, 
+                       test_reg, type = "response")
+predict_gam <- predict(gam_model, test_reg, type="response")
+predict_lm <- predict(lm_model, test_reg, type="response")
+plot(test_reg$RUL, predict_glm)
+
+length(predict_gam)
+length(test_reg$RUL)
+plot(test_reg$RUL, predict_gam)
+
+rsq <- function (x, y) cor(x, y) ^ 2
+
+library(leaps)
+str(train_reg)
+regfit.full <- regsubsets(RUL ~ . - id - cycle, data = train_reg,
+                          nvmax = 19) # includes all variables
+reg.summary <- summary(regfit.full)
+reg.summary$which
+
+deg = 6
+
+gam_model <- gam(RUL ~ s(op2, deg) + s(sensor2, deg)+s(sensor3, deg)+s(sensor4, deg)+s(sensor5, deg)+s(sensor6, deg)+s(sensor9, deg)+s(sensor11, deg)+s(sensor13, deg)+s(sensor17, deg)+s(sensor18, deg), data=train_reg)
+predict_gam <- predict(gam_model, test_reg, type="response")
+rsq(test_reg$RUL, predict_gam)
+
+mean( (test_reg$RUL - predict_gam)^2 )
+
+
+
+
+
+
+
+
+
+
+
