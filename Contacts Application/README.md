@@ -1,5 +1,5 @@
 # Contacts Application
-Developed an interactive contact list program with a GUI allows users to manage their contacts through a visually intuitive interface. Users can add, remove, import and export contacts efficiently. The program includes components like text fields, buttons, and tables to display and interact with contact information.
+This project is an interactive contact list program with a GUI allows users to manage their contacts through a visually intuitive interface. Users can add, remove, import and export contacts efficiently. The program includes components like text fields, buttons, and tables to display and interact with contact information.
 ## Home Page
 The users are welcomed to a page with all of their contacts, below is an example:
 ![image](https://github.com/raaedmunshi/project_repo/assets/124057630/356ee778-cf35-4039-8cc2-7ed98cabeae7)
