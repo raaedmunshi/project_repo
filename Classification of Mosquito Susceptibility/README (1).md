@@ -29,7 +29,7 @@ After that, we performed data preprocessing methods:
 
 # Class Imbalance
 
-![class_imbalance]("class_imbalance")
+![class_imbalance]("class_imbalance.png")
 
 
 
