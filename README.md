@@ -14,7 +14,7 @@ Implemented semantic segmentation models, including Deeplabv3 with a Resnet101 b
 **Description**: 
 Developed a model to classify the resistance status of malaria-causing mosquitoes to various insecticides using machine learning techniques. We used machine learning models like Decision Trees, KNN, SVM Linear and Non-Linear, and Naive Bayes. We examined factors like insecticide type, class, concentration, environmental conditions (country and year), and mosquito characteristics (species and number) during bioassay. To ensure data quality, we've filtered out null values and inconsistencies in insecticide concentration and applied MinMax scaling for normalization. Analyzing class distributions, we've experimented with methods to handle imbalances, finding stratified sampling with oversampling and undersampling to be the best approach, yielding a decision tree model with 70.0% accuracy using random forest feature importance for feature selection, and achieving similar results without feature selection and using PCA.
 
-**Languages and Libraries used**: Python with scikit-learn, pandas, matplotlib,and seaborn
+**Languages and Libraries used**: Python with scikit-learn, pandas, matplotlib,and seaborn packages
 
 ### 3. Weed Detection using EfficientViT
 
