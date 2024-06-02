@@ -29,7 +29,7 @@ After that, we performed data preprocessing methods:
 
 # Class Imbalance
 
-![class_imbalance]("https://github.com/raaedmunshi/project_repo/assets/124057630/c4a24bbf-a8bc-43ce-8170-745a5633bb7a")
+![class_imbalance]("[https://github.com/raaedmunshi/project_repo/assets/124057630/c4a24bbf-a8bc-43ce-8170-745a5633bb7a](https://drive.google.com/file/d/1vAOlFobimidd9i2Yi388u0E8pY-MQ2Ne/view)")
 
 
 
