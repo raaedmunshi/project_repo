@@ -7,14 +7,14 @@ Hi, I'm Raaed! Welcome to my GitHub repository where I share my projects and exp
 **Description**: 
 Implemented semantic segmentation models, including Deeplabv3 with a Resnet101 backbone, Segformer, SwinUNetR, and UNetR, to evaluate the efficacy of transformers in colorectal gland segmentation compared to CNN architectures. The models were tested on colorectal gland datasets to compare their performance in accurately segmenting glandular structures. The results demonstrated that transformer-based models, such as Segformer and SwinUNetR, provided good potential in segmentation accuracy and robustness over traditional CNN-based models, highlighting their guarantee for enhanced precision in medical image analysis. This advancement can lead to more accurate diagnostics and better treatment planning in colorectal cancer care.
 
-**Languages and Libraries**: Python with Pytorch and cv2 packages
+**Languages and Libraries**: Python with Pytorch and cv2, pandas,scikit-Learn, and numpy packages
 
 ### 2. Mosquito Susceptibility to Insecticides Classification Using Bioassay Results
 
 **Description**: 
 Developed a model to classify the resistance status of malaria-causing mosquitoes to various insecticides using machine learning techniques. We used machine learning models like Decision Trees, KNN, SVM Linear and Non-Linear, and Naive Bayes. We examined factors like insecticide type, class, concentration, environmental conditions (country and year), and mosquito characteristics (species and number) during bioassay. To ensure data quality, we've filtered out null values and inconsistencies in insecticide concentration and applied MinMax scaling for normalization. Analyzing class distributions, we've experimented with methods to handle imbalances, finding stratified sampling with oversampling and undersampling to be the best approach, yielding a decision tree model with 70.0% accuracy using random forest feature importance for feature selection, and achieving similar results without feature selection and using PCA.
 
-**Languages and Libraries used**: Python with scikit-learn packages
+**Languages and Libraries used**: Python with scikit-learn, pandas, matplotlib,and seaborn
 
 ### 3. Weed Detection using EfficientViT
 
