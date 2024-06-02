@@ -2,7 +2,7 @@
 Hi, I'm Raaed! Welcome to my GitHub repository where I share my projects and experiments. I have a deep passion for computer vision and app development, and I love turning innovative ideas into reality through code.
 ## Featured Projects
 
-### 1. Efficacy of Transformer Models on Colorectal Gland Segmentation
+### 1. Efficacy of Transformer Models on Colorectal Gland Segmentation (in the Semantic-Segmentation-of-Glands repo)
 
 **Description**: 
 Implemented semantic segmentation models, including Deeplabv3 with a Resnet101 backbone, Segformer, SwinUNetR, and UNetR, to evaluate the efficacy of transformers in colorectal gland segmentation compared to CNN architectures. The models were tested on colorectal gland datasets to compare their performance in accurately segmenting glandular structures. The results demonstrated that transformer-based models, such as Segformer and SwinUNetR, provided good potential in segmentation accuracy and robustness over traditional CNN-based models, highlighting their guarantee for enhanced precision in medical image analysis. This advancement can lead to more accurate diagnostics and better treatment planning in colorectal cancer care.
