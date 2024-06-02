@@ -1,4 +1,4 @@
-# Welcome to my My GitHub Projects!
+# Welcome to my My GitHub!
 Hi, I'm Raaed! Welcome to my GitHub repository where I share my projects and experiments. I have a deep passion for computer vision and app development, and I love turning innovative ideas into reality through code.
 ## Featured Projects
 
